@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "DragonBase.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values
@@ -13,7 +14,7 @@ ADragonBase::ADragonBase()
 	CurrentSpeed = 1.0f;
 	InitialLength = 10;
 	Speed = 1.0f;
-	RotationSpeed = 1.0f;
+	TurnSpeed = 1.0f;
 	BalancingSpeed = 1.0f;
 	WaveSpeed = 300.0f;
 	WaveScale = 0.01f;
@@ -58,6 +59,7 @@ void ADragonBase::BeginPlay()
 		prev.Y = prev.Y + MinDistanceOfSegments;
 
 		segment->SetActorLocation(prev);
+		segment->SetActorScale3D(segment->GetActorScale() / (i / 3));
 
 		// Attach the segment to myself
 		segment->AttachToActor(this, FAttachmentTransformRules(EAttachmentRule::KeepWorld, true));
@@ -76,6 +78,10 @@ void ADragonBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (DebugNoMove) {
+		return;
+	}
+
 	// Guard from wrong setup
 	if (HeadPartClass == nullptr || BodyPartClass == nullptr) {
 		UE_LOG(LogTemp, Warning, TEXT("DragonBase is not setup properly."));
@@ -88,6 +94,7 @@ void ADragonBase::Tick(float DeltaTime)
 
 }
 
+// TODO: Move this to AI Controller
 void ADragonBase::Move(float DeltaTime) {
 
 	// Check if I know my target
@@ -96,13 +103,12 @@ void ADragonBase::Move(float DeltaTime) {
 	if (TargetLocation.IsZero()) 
 		return;
 
-
 	TargetLocation.Z = FMath::Sin(GFrameNumber * WaveScale) * WaveSpeed + TargetLocation.Z;
 	UE_LOG(LogTemp, Warning, TEXT("%d"), (int)GFrameNumber);
 
-
 	Head->SetActorLocation(FMath::Lerp(Head->GetActorLocation(), TargetLocation, Speed / SpeedScale));
-	
+	Head->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(Head->GetActorLocation(), TargetLocation));
+
 	AActor* prevSegment = Head;
 
 	// Move body parts
@@ -115,15 +121,14 @@ void ADragonBase::Move(float DeltaTime) {
 		float distance = FVector::Dist(currentLocation, prevLocation);
 		float alpha = DeltaTime * distance / MinDistanceOfSegments * CurrentSpeed;
 
-		//if (alpha > 0.3f)
-		//	alpha = 0.3f;
-
 		currentSegment->SetActorLocation(FMath::Lerp(currentLocation, prevLocation, alpha));
 		currentSegment->SetActorRotation(FMath::Lerp(currentSegment->GetActorRotation(), prevSegment->GetActorRotation(), alpha));
 
 		prevSegment = currentSegment;
 
 	}
+
+
 }
 
 void ADragonBase::FindTarget() {
@@ -135,5 +140,26 @@ void ADragonBase::FindTarget() {
 	if (player) {
 		TargetLocation = player->GetActorLocation();
 	}
+
+}
+
+
+int ADragonBase::GetTurnDirection(FVector forward, FVector location, FVector targetLocationVector) {
+
+	FVector normalizedDelta = (location - targetLocationVector).GetSafeNormal();
+	float dotProduct = FVector::DotProduct(normalizedDelta, forward);
+	FVector crossProduct = FVector::CrossProduct(normalizedDelta, forward);
+
+	if (crossProduct.Z > 0) {
+		// left
+		return 1;
+	}
+	else if (crossProduct.Z < 0) {
+		// right
+		return -1;
+	}
+
+	// straight
+	return 0;
 
 }

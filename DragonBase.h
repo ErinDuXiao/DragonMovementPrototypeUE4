@@ -12,22 +12,30 @@ class DRAGONPROTO_API ADragonBase : public AActor
 {
 	GENERATED_BODY()
 
-	class AActor* Head;
-
-	TArray<class AActor*> Segments;
-
-	float CurrentSpeed;
-
-	// TODO: Make state machine
-	FVector TargetLocation;
-
 protected:
 	virtual void BeginPlay() override;
 
 public:	
 	ADragonBase();
 		
+	UPROPERTY(Category = IngameVariable, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Head"))
+	class AActor* Head;
+
+	UPROPERTY(Category = IngameVariable, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Segments"))
+	TArray<class AActor*> Segments;
+	
+	UPROPERTY(Category = IngameVariable, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "CurrentSpeed"))
+	float CurrentSpeed;
+
+	// TODO: Make state machine
+	UPROPERTY(Category = IngameVariable, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "TargetLocation"))
+	FVector TargetLocation;
+
+
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "DebugNoMove", ClampMin = 0.0f, ClampMax = 100.0f))
+		bool DebugNoMove;
 
 	UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Length"))
 		int InitialLength;
@@ -36,7 +44,7 @@ public:
 		float Speed;
 
 	UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "RotationSpeed", ClampMin = 0.1f, ClampMax = 150.0f))
-		float RotationSpeed;
+		float TurnSpeed;
 
 	UPROPERTY(Category = Setup, EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "BalancingSpeed", ClampMin = 0.1f, ClampMax = 150.0f))
 		float BalancingSpeed;
@@ -65,4 +73,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 		virtual void FindTarget();
 
+	UFUNCTION(BlueprintCallable)
+		int GetTurnDirection(FVector forward, FVector location, FVector targetLocationVector);
 };
